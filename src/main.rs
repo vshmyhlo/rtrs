@@ -1,60 +1,36 @@
-use glam::Vec3;
-use image::{ImageFormat, Rgb, Rgb32FImage, RgbImage};
-use std::fs::File;
+use crate::sphere::Sphere;
+mod camera;
+use crate::camera::Camera;
+mod utils;
+use glam::{Vec2, Vec3};
+mod interval;
+use hittable::Hittable;
+use image::{buffer::ConvertBuffer, ImageFormat, Rgb, Rgb32FImage, RgbImage};
+mod hittable;
+mod ray;
+mod sphere;
+use rand::{
+    distributions::{
+        uniform::{UniformFloat, UniformSampler},
+        Standard, Uniform,
+    },
+    prelude::*,
+};
+use std::{fs::File, time};
 
-struct Ray {
-    origin: Vec3,
-    direction: Vec3,
-}
-
-impl  Ray {
-
-} {
-    
-}
-
-type RgbF32 = Rgb<f32>;
+type Color = Rgb<f32>;
 
 fn main() -> Result<(), image::ImageError> {
-    let mut image = Rgb32FImage::new(1920, 1080);
+    let mut world: Vec<Box<dyn Hittable + Sync>> = vec![];
+    world.push(Box::new(Sphere::new(Vec3::new(0., 0., -1.), 0.5)));
+    world.push(Box::new(Sphere::new(Vec3::new(0., -100.5, -1.), 100.)));
 
-    for x in 0..1920 {
-        for y in 0..1080 {
-            let ray = Ray::new(camera_center, ray_direction);
-            let pixel = ray_color(&ray);
-            image.put_pixel(x, y, pixel);
-        }
-    }
+    let camera = Camera::new(1920, 1080);
+
+    let start = time::Instant::now();
+    let image: RgbImage = camera.render(&world).convert();
+    println!("render took {:?}", start.elapsed());
 
     let mut file = File::create("./image.png")?;
     image.write_to(&mut file, ImageFormat::Png)
-}
-
-struct Sphere {
-    center: Vec3,
-    radius: f32,
-}
-
-impl Sphere {
-    fn new(center: Vec3, radius: f32) -> Sphere {
-        Sphere { center, radius }
-    }
-}
-
-fn hit_sphere(sphere: &Sphere, ray: &Ray) -> bool {
-    let oc = sphere.center - ray.origin;
-    let a = ray.direction.dot(ray.direction);
-    let b = -2.0 * ray.direction.dot(oc);
-    let c = oc.dot(oc) - sphere.radius * sphere.radius;
-    let discriminant = b * b - 4.0 * a * c;
-    discriminant >= 0.0
-}
-
-fn ray_color(ray: &Ray) -> RgbF32 {
-    let sphere = Sphere::new(Vec3::new(0., 0., -1.), 0.5);
-    if hit_sphere(&sphere, ray) {
-        return Rgb([1., 0., 0.]);
-    }
-
-    Rgb([0., 0., 0.])
 }
